@@ -145,7 +145,7 @@ export default function Dashboard() {
                     tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
                     tickFormatter={(v) => v >= 1000000 ? `${v / 1000000}M` : `${v / 1000}k`}
                   />
-                  <Tooltip formatter={(value: number) => [formatCOP(value), "Ventas"]} />
+<Tooltip formatter={(value: any) => [formatCOP(Number(value)), "Ventas"]} />
                   <Area type="monotone" dataKey="v" stroke="#4CAF50" strokeWidth={2} fill="url(#greenGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -188,7 +188,7 @@ export default function Dashboard() {
                   tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
                   tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${v / 1000}k`}
                 />
-                <Tooltip formatter={(value: number) => [formatCOP(value), "Ventas"]} />
+                <Tooltip formatter={(value: any) => [formatCOP(Number(value)), "Ventas"]} />
                 <Bar dataKey="v" fill="#4CAF50" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -206,7 +206,7 @@ export default function Dashboard() {
                   tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
                   tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${v / 1000}k`}
                 />
-                <Tooltip formatter={(value: number) => [formatCOP(value), "Ventas"]} />
+                <Tooltip formatter={(value: any) => [formatCOP(Number(value)), "Ventas"]} />
                 <Line type="monotone" dataKey="v" stroke="#4CAF50" strokeWidth={2} dot={{ fill: "#4CAF50", r: 3 }} />
               </LineChart>
             </ResponsiveContainer>

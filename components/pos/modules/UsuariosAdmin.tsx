@@ -42,11 +42,13 @@ export default function UsuariosAdmin() {
   }, [role, router])
 
   const fetchProfiles = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('perfiles')
-      .select('*, auth.users!inner(email)')
+      .select('*')
       .order('created_at', { ascending: false })
-    setProfiles(data || [])
+    if (!error && data) {
+      setProfiles(data)
+    }
     setLoading(false)
   }
 

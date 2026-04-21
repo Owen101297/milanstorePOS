@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Plus, UploadCloud, Download, Image as ImageIcon, Filter, Layers, BarChart, X, Check, FileDown, FileUp, AlertCircle, Edit2, Archive } from "lucide-react"
+import { Search, Plus, UploadCloud, Download, Image as ImageIcon, Filter, Layers, BarChart, X, Check, FileDown, FileUp, AlertCircle, Edit2, Archive, Trash2, RefreshCcw } from "lucide-react"
 
 // Tipos de Datos
 type Variante = {

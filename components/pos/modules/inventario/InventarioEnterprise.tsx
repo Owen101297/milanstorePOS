@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Server, DollarSign, Eye, RefreshCw, BarChart2, Shield, Calendar, Layers, PenTool, Database, Plus, Check } from "lucide-react"
+import { Search, Server, DollarSign, Eye, RefreshCw, BarChart2, Shield, Calendar, Layers, PenTool, Database, Plus, Check, AlertCircle } from "lucide-react"
 
 // Types Enterprise
 type Movimiento = { id: string; fecha: string; ref: string; tipo: string; cant: number; stock_ant: number; stock_nuevo: number; auth: string; costo_ponderado: number }

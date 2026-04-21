@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Search, Plus, Minus, Trash2, ShoppingCart, User, Tag, Percent, ChevronDown, Receipt, UserPlus, UserCheck, PauseCircle, Clock, Lock, Calculator, CheckCircle, AlertTriangle, Printer } from "lucide-react"
+import { Search, Plus, Minus, Trash2, ShoppingCart, User, Tag, Percent, ChevronDown, Receipt, UserPlus, UserCheck, PauseCircle, Clock, Lock, Calculator, CheckCircle, AlertTriangle, Printer, X } from "lucide-react"
 import { useReactToPrint } from "react-to-print"
 import { TicketImpreso } from "../TicketImpreso"
 
@@ -160,7 +160,7 @@ export default function Vender() {
   const printRef = useRef<HTMLDivElement>(null)
   
   const handlePrintReceipt = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     pageStyle: "@page { size: auto; margin: 0mm; }",
     onAfterPrint: () => resetAfterSale()
   })
