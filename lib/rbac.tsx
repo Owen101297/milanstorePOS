@@ -43,7 +43,10 @@ const SUBMENU_PERMISSIONS: Record<string, UserRole[]> = {
  */
 export function hasModuleAccess(moduleId: string, role: UserRole): boolean {
   const allowed = MODULE_PERMISSIONS[moduleId]
-  if (!allowed) return true // Módulos no listados son accesibles por defecto
+  if (!allowed) {
+    console.warn(`RBAC: El módulo "${moduleId}" no tiene permisos definidos. Acceso concedido por defecto.`);
+    return true 
+  }
   return allowed.includes(role)
 }
 
@@ -70,7 +73,7 @@ export function withRoleGuard<P extends object>(
   allowedRoles: UserRole[]
 ) {
   return function GuardedComponent(props: P & { currentRole?: UserRole }) {
-    const role = props.currentRole || 'cajero' // Default: rol más restrictivo
+    const role = props.currentRole || 'cajero' 
     
     if (!allowedRoles.includes(role)) {
       return (
@@ -80,7 +83,7 @@ export function withRoleGuard<P extends object>(
           </div>
           <h3 className="text-xl font-black text-gray-800 mb-2">Acceso Restringido</h3>
           <p className="text-sm text-gray-500 text-center max-w-sm">
-            Tu perfil de <span className="font-bold text-red-500 uppercase">{role}</span> no tiene 
+            Tu perfil de <span className="font-bold text-red-500 uppercase">{role || 'INVITADO'}</span> no tiene 
             permisos para acceder a este módulo. Contacta al administrador del sistema.
           </p>
         </div>

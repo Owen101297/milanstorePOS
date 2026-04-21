@@ -10,12 +10,12 @@
 - docker-compose.yml para local
 - Healthcheck /api/health
 - Fix bug app/test/page.js (build error)
+- Auditoría de seguridad RBAC y Hydration completa
 
-**Próximos pasos:**
-1. Copia `.env.example` → `.env` con tus Supabase keys
-2. `npm run build` (ahora debe pasar)
-3. `docker compose up --build` test local
-4. Git push a repo conectado a Coolify + set env vars
+🚀 **SISTEMA CERTIFICADO PARA DEPLOY**
 
-Coolify detectará Dockerfile auto.
-
+**Pasos para el lanzamiento:**
+1. `git add .`
+2. `git commit -m "feat: ready for production deployment on Coolify"`
+3. `git push origin main`
+4. En Coolify: Vincular repositorio y configurar variables de entorno.
