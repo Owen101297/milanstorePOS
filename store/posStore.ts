@@ -74,6 +74,7 @@ interface PosState {
   currentUser: string
   setRole: (role: UserRole) => void
   setUser: (name: string) => void
+  logout: () => void
 
   // === Estado de la Caja Activa ===
   isCajaAbierta: boolean
@@ -113,9 +114,10 @@ export const usePosStore = create<PosState>()(
     (set, get) => ({
       // Auth
       currentRole: 'admin' as UserRole,
-      currentUser: 'Administrador',
+      currentUser: '',
       setRole: (role) => set({ currentRole: role }),
       setUser: (name) => set({ currentUser: name }),
+      logout: () => set({ currentUser: '', currentRole: 'admin' as UserRole }),
 
       // Caja
       isCajaAbierta: false,

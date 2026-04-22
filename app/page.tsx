@@ -14,6 +14,7 @@ import Informes from "@/components/pos/modules/Informes"
 import Nomina from "@/components/pos/modules/Nomina"
 import Tienda from "@/components/pos/modules/Tienda"
 import ConfiguracionNegocio from "@/components/pos/modules/ConfiguracionNegocio"
+import UsuariosAdmin from "@/components/pos/modules/UsuariosAdmin"
 
 // MEJORAS PRO: Hydration + Network + RBAC
 import { HydrationBoundary, useNetworkMonitor } from "@/hooks"
@@ -67,6 +68,8 @@ function MilanPOSApp() {
         return <Informes subMenu={activeSubMenu} />
       case "tienda":
         return <Tienda subMenu={activeSubMenu} />
+      case "usuarios":
+        return <UsuariosAdmin />
       case "configuracion":
         return <ConfiguracionNegocio />
       default:
@@ -87,6 +90,7 @@ function MilanPOSApp() {
       contactos: "Contactos",
       informes: "Informes",
       tienda: "Tienda Online",
+      usuarios: "Usuarios",
       configuracion: "Configuración y Red",
     }
     return titles[activeModule] || "Inicio"
@@ -110,7 +114,14 @@ function MilanPOSApp() {
       )}
 
       {/* Topbar */}
-      <Topbar />
+      <Topbar 
+        setActiveModule={(mod) => {
+          setActiveModule(mod)
+          setActiveSubMenu("")
+        }}
+        setActiveSubMenu={setActiveSubMenu}
+        activeModule={activeModule}
+      />
 
       {/* Sidebar */}
       <Sidebar

@@ -1,12 +1,22 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Bell, Grid3x3, User, MapPin, CheckCircle, Package, LogOut, Settings, DollarSign, Activity } from "lucide-react"
+import { Bell, Grid3x3, User, MapPin, CheckCircle, Package, LogOut, Settings, DollarSign, Activity, Users, Cog } from "lucide-react"
+import { usePosStore } from "@/store/posStore"
 
-export default function Topbar() {
+interface TopbarProps {
+  setActiveModule: (module: string) => void
+  setActiveSubMenu: (sub: string) => void
+  activeModule?: string
+}
+
+export default function Topbar({ setActiveModule, setActiveSubMenu, activeModule = "" }: TopbarProps) {
   const [sedeActiva, setSedeActiva] = useState("1")
   const [isSyncing, setIsSyncing] = useState(false)
-  const [openMenu, setOpenMenu] = useState<"bell" | "grid" | "user" | null>(null)
+  const [openMenu, setOpenMenu] = useState<"bell" | "grid" | "user" | "admin" | null>(null)
+  const logout = usePosStore(s => s.logout)
+  const currentUser = usePosStore(s => s.currentUser)
+  const currentRole = usePosStore(s => s.currentRole)
 
   // Recupera persistencia standalone
   useEffect(() => {
@@ -63,15 +73,62 @@ export default function Topbar() {
             </button>
             {openMenu === "grid" && (
               <div className="absolute top-10 right-0 w-64 bg-white border border-gray-200 rounded-lg shadow-xl p-3 z-50 grid grid-cols-2 gap-2">
-                <div className="flex flex-col items-center justify-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer text-gray-600 transition-colors">
+                <button 
+                  onClick={() => { setActiveModule("vender"); setActiveSubMenu(""); setOpenMenu(null) }}
+                  className="flex flex-col items-center justify-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer text-gray-600 transition-colors"
+                >
                    <DollarSign className="w-6 h-6 mb-1 text-green-600"/> <span className="text-xs font-bold">Cobrar</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer text-gray-600 transition-colors">
+                </button>
+                <button 
+                  onClick={() => { setActiveModule("inventario"); setActiveSubMenu(""); setOpenMenu(null) }}
+                  className="flex flex-col items-center justify-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer text-gray-600 transition-colors"
+                >
                    <Package className="w-6 h-6 mb-1 text-blue-600"/> <span className="text-xs font-bold">Kardex</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer text-gray-600 transition-colors col-span-2 border border-gray-100">
+                </button>
+                <button 
+                  onClick={() => { setActiveModule("ventas"); setActiveSubMenu("Cierres de Caja"); setOpenMenu(null) }}
+                  className="flex flex-col items-center justify-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer text-gray-600 transition-colors col-span-2 border border-gray-100"
+                >
                    <Activity className="w-5 h-5 mb-1 text-purple-600"/> <span className="text-xs font-bold">Auditoría Cajas</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Admin Menu - Usuarios y Sistema */}
+          <div className="relative">
+            <button 
+              onClick={() => setOpenMenu(openMenu === "admin" ? null : "admin")}
+              className={`p-1.5 rounded-md transition-colors ${openMenu === 'admin' ? 'bg-gray-100 text-green-600' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Cog className="w-5 h-5" />
+            </button>
+            {openMenu === "admin" && (
+              <div className="absolute top-10 right-0 w-48 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden z-50">
+                <div className="bg-gray-50 border-b border-gray-100 px-3 py-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase">Administración</p>
                 </div>
+                <button 
+                  onClick={() => { setActiveModule("usuarios"); setActiveSubMenu(""); setOpenMenu(null) }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-50"
+                >
+                  <Users className="w-4 h-4" />
+                  Usuarios
+                </button>
+                <button 
+                  onClick={() => { setActiveModule("configuracion"); setActiveSubMenu(""); setOpenMenu(null) }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-50"
+                >
+                  <Cog className="w-4 h-4" />
+                  Configuración
+                </button>
+                <button 
+                  onClick={() => { setActiveModule("informes"); setActiveSubMenu(""); setOpenMenu(null) }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Activity className="w-4 h-4" />
+                  Informes
+                </button>
               </div>
             )}
           </div>
@@ -124,13 +181,19 @@ export default function Topbar() {
             {openMenu === "user" && (
                 <div className="absolute top-10 right-0 w-56 bg-white border border-gray-200 rounded-lg shadow-xl flex flex-col z-50 overflow-hidden">
                    <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-4">
-                      <p className="text-sm font-bold text-white">Super Admin</p>
-                      <p className="text-xs text-gray-300 truncate">gerencia@milanpos.com</p>
+                      <p className="text-sm font-bold text-white capitalize">{currentUser || 'Usuario'}</p>
+                      <p className="text-xs text-gray-300 capitalize">{currentRole || 'Sin rol'}</p>
                    </div>
-                   <div className="p-1 flex flex-col items-stretch">
-                      <button className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded text-sm text-gray-700 font-medium w-full text-left transition-colors"><Settings className="w-4 h-4"/> Configuración</button>
-                      <button className="flex items-center gap-2 p-2 hover:bg-red-50 rounded text-sm font-medium text-red-600 w-full text-left transition-colors border-t border-gray-100"><LogOut className="w-4 h-4"/> Cerrar Sesión</button>
-                   </div>
+<div className="p-1 flex flex-col items-stretch">
+                       <button 
+                         onClick={() => { setActiveModule("configuracion"); setActiveSubMenu(""); setOpenMenu(null) }}
+                         className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded text-sm text-gray-700 font-medium w-full text-left transition-colors"
+                       ><Settings className="w-4 h-4"/> Configuración</button>
+                       <button 
+                         onClick={() => logout()}
+                         className="flex items-center gap-2 p-2 hover:bg-red-50 rounded text-sm font-medium text-red-600 w-full text-left transition-colors border-t border-gray-100"
+                       ><LogOut className="w-4 h-4"/> Cerrar Sesión</button>
+                    </div>
                 </div>
             )}
           </div>

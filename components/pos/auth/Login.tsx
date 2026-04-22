@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { usePosStore } from '@/store/posStore'
 import { Shield, LogIn, Mail, Lock, User } from 'lucide-react'
+import type { UserRole } from '@/lib/rbac'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -13,6 +15,14 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const { signIn } = useAuth()
   const router = useRouter()
+  const setUser = usePosStore(s => s.setUser)
+  const setRole = usePosStore(s => s.setRole)
+
+  const handleDemoLogin = (rol: UserRole) => {
+    setUser(rol === 'admin' ? 'Demo Administrador' : rol === 'gerente' ? 'Demo Gerente' : rol === 'cajero' ? 'Demo Cajero' : 'Demo Bodeguero')
+    setRole(rol)
+    router.push('/')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,6 +115,40 @@ export default function Login() {
 
         <div className="text-xs text-center text-slate-400 pt-4 border-t border-slate-200">
           ¿Usuario nuevo? Admin creará tu cuenta en Panel Usuarios.
+        </div>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-bold text-slate-500 text-center uppercase tracking-widest">Modo Demo - Sin Supabase</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('admin')}
+              className="bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all"
+            >
+              Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('gerente')}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all"
+            >
+              Gerente
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('cajero')}
+              className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all"
+            >
+              Cajero
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('bodeguero')}
+              className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all"
+            >
+              Bodeguero
+            </button>
+          </div>
         </div>
       </div>
     </div>

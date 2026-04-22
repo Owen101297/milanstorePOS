@@ -25,6 +25,7 @@ const MODULE_PERMISSIONS: Record<string, UserRole[]> = {
   informes:       ['admin', 'gerente'],
   nomina:         ['admin'],
   tienda:         ['admin', 'gerente'],
+  usuarios:       ['admin'],
   configuracion:  ['admin'],
 }
 

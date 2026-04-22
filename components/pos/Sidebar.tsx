@@ -59,12 +59,6 @@ const navItems = [
       "Configurar Tienda", "Pedidos Online", "Categorías Tienda"
     ]
   },
-  {
-    id: "usuarios", label: "Usuarios", icon: Users, subMenu: []
-  },
-  {
-    id: "configuracion", label: "Sistema", icon: Settings, subMenu: []
-  },
 ]
 
 export default function Sidebar({ activeModule, setActiveModule, activeSubMenu, setActiveSubMenu }: SidebarProps) {
