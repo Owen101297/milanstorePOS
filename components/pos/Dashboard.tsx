@@ -1,272 +1,257 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import dynamic from "next/dynamic"
+import React, { useState, useEffect, useCallback } from "react"
+import { 
+  ShoppingCart, FileText, Banknote, RefreshCcw, 
+  ChevronDown, ArrowRight, MessageCircle, Menu, 
+  CreditCard, Settings, Utensils, ShoppingBag, 
+  CircleDollarSign, X, Loader2, Coins
+} from "lucide-react"
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, BarChart, Bar
+} from "recharts"
 import { useSede } from "@/components/pos/providers/SedeContext"
-import { TrendingUp, FileText, TrendingDown, DollarSign, ChevronRight, ShoppingBag, AlertTriangle, Package, UserCheck, MapPin } from "lucide-react"
+import { usePosStore } from "@/store/posStore"
+import { reportes } from "@/lib/services"
+import type { 
+  DashboardMetrics, VentaPorHora, VentaPorMetodo, VentaPorDia, TendenciaSemanal 
+} from "@/lib/services/reportes.service"
 
-// Lazy Loading para las gráficas (Evita sobrecargar el hilo principal)
-const ResponsiveContainer = dynamic(() => import("recharts").then(mod => mod.ResponsiveContainer), { ssr: false })
-const AreaChart = dynamic(() => import("recharts").then(mod => mod.AreaChart), { ssr: false })
-const Area = dynamic(() => import("recharts").then(mod => mod.Area), { ssr: false })
-const XAxis = dynamic(() => import("recharts").then(mod => mod.XAxis), { ssr: false })
-const YAxis = dynamic(() => import("recharts").then(mod => mod.YAxis), { ssr: false })
-const CartesianGrid = dynamic(() => import("recharts").then(mod => mod.CartesianGrid), { ssr: false })
-const Tooltip = dynamic(() => import("recharts").then(mod => mod.Tooltip), { ssr: false })
-const BarChart = dynamic(() => import("recharts").then(mod => mod.BarChart), { ssr: false })
-const Bar = dynamic(() => import("recharts").then(mod => mod.Bar), { ssr: false })
-const LineChart = dynamic(() => import("recharts").then(mod => mod.LineChart), { ssr: false })
-const Line = dynamic(() => import("recharts").then(mod => mod.Line), { ssr: false })
+const fmtCOP = (v: number) => "$ " + Math.round(v).toLocaleString("es-CO")
 
-const hourlyData = [
-  { h: "1", v: 50000 }, { h: "2", v: 120000 }, { h: "3", v: 200000 },
-  { h: "4", v: 150000 }, { h: "5", v: 300000 }, { h: "6", v: 280000 },
-  { h: "7", v: 420000 }, { h: "8", v: 800000 }, { h: "9", v: 450000 },
-  { h: "10", v: 350000 }, { h: "11", v: 600000 }, { h: "12", v: 250000 },
-]
+const Dashboard = ({ onModuleChange }: { onModuleChange: (m: string) => void }) => {
+  const { sedeId, sedeNombre } = useSede()
+  const currentUser = usePosStore(s => s.currentUser)
+  const [activeTab, setActiveTab] = useState("inicializacion")
+  
+  const [metrics, setMetrics] = useState<DashboardMetrics>({ ventasHoy: 0, facturasHoy: 0, gastosHoy: 0, utilidadHoy: 0 })
+  const [hourlyData, setHourlyData] = useState<VentaPorHora[]>([])
+  const [metodosData, setMetodosData] = useState<VentaPorMetodo[]>([])
+  const [dailyData, setDailyData] = useState<VentaPorDia[]>([])
+  const [tendencia, setTendencia] = useState<TendenciaSemanal>({ currentWeek: 0, previousWeek: 0, growth: 0 })
+  const [loading, setLoading] = useState(true)
 
-const weeklyData = [
-  { d: "Lun", v: 1200000 }, { d: "Mar", v: 900000 }, { d: "Mie", v: 1500000 },
-  { d: "Jue", v: 800000 }, { d: "Vie", v: 2100000 }, { d: "Sab", v: 2690700 }, { d: "Dom", v: 500000 },
-]
-
-const weeklyTrend = [
-  { d: "Lun", v: 1800000 }, { d: "Mar", v: 1200000 }, { d: "Mie", v: 2100000 },
-  { d: "Jue", v: 950000 }, { d: "Vie", v: 2400000 }, { d: "Sab", v: 2690700 }, { d: "Dom", v: 650000 },
-]
-
-const paymentMethods = [
-  { method: "Efectivo", amount: 1888700, color: "#4CAF50" },
-  { method: "Tarjeta C/D", amount: 750000, color: "#2196F3" },
-  { method: "Transferencia", amount: 52000, color: "#FF9800" },
-]
-
-const lowStockAlerts = [
-  { item: "Camiseta Básica - M", remaining: 2 },
-  { item: "Jean Clásico Slim - 32", remaining: 1 },
-  { item: "Chaqueta Cuero - L", remaining: 0 },
-  { item: "Gorra Urbana - Única", remaining: 3 },
-]
-
-const topSellers = [
-  { name: "Sara Navarro", total: "$ 1,200,000", sales: 12 },
-  { name: "Carlos Bernal", total: "$ 850,000", sales: 8 },
-  { name: "Andrea Rivas", total: "$ 640,700", sales: 5 },
-]
-
-const formatCOP = (v: number) => "$ " + v.toLocaleString("es-CO")
-
-export default function Dashboard() {
-  const { sedeId, isSyncing } = useSede()
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // Mapeo dinámico del nombre de la Sede en base al Contexto Global
-  const sedeName = useMemo(() => {
-     if (sedeId === "1") return "Sede Principal (Centro)"
-     if (sedeId === "2") return "Sucursal Norte (Boutique)"
-     if (sedeId === "3") return "Bodega Outlet (Descuentos)"
-     return "Sede Desconocida"
+  const fetchAll = useCallback(async () => {
+    if (!sedeId) return
+    setLoading(true)
+    try {
+      const [m, h, mp, d, t] = await Promise.all([
+        reportes.getDashboardMetrics(sedeId),
+        reportes.getVentasPorHora(sedeId),
+        reportes.getVentasPorMetodo(sedeId),
+        reportes.getVentasUltimos7Dias(sedeId),
+        reportes.getTendenciaSemanal(sedeId)
+      ])
+      setMetrics(m); setHourlyData(h); setMetodosData(mp); setDailyData(d); setTendencia(t)
+    } catch (err) {
+      console.error("Dashboard Fetch Error:", err)
+    } finally {
+      setLoading(false)
+    }
   }, [sedeId])
 
-  if (!isClient) return null // Evita fallos de hidratación SSR de las gráficas
+  useEffect(() => { fetchAll() }, [fetchAll])
 
-  return (
-    <div className="flex flex-col xl:flex-row gap-6 pb-12">
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
-        {/* Almacén selector (Sincronizado vía Contexto/Encabezado) */}
-        <div className="flex items-center justify-between mb-5 bg-white p-4 rounded-lg shadow-sm border border-gray-100 transition-all duration-300">
-           <div>
-             <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block">Contexto de Análisis Activo</span>
-             <h2 className="text-xl font-black text-gray-800 flex items-center gap-2 mt-1">
-                <MapPin className="w-5 h-5 text-green-500" />
-                {sedeName}
-             </h2>
-           </div>
-           {isSyncing && (
-             <span className="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1 rounded-full animate-pulse border border-blue-200">
-                Resincronizando Datos...
-             </span>
-           )}
-        </div>
-
-        {/* KPI Cards (Grid Autoadaptable) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-          {[
-            { label: "Ventas Netas Hoy", value: "$ 2,690,700", trend: "+12.5%", isUp: true, icon: TrendingUp, bg: "bg-green-50", color: "text-green-500" },
-            { label: "Ticket Promedio", value: "$ 179,380", trend: "+5.2%", isUp: true, icon: FileText, bg: "bg-blue-50", color: "text-blue-500" },
-            { label: "Prendas Vendidas", value: "45", trend: "-2.1%", isUp: false, icon: ShoppingBag, bg: "bg-purple-50", color: "text-purple-500" },
-            { label: "Devoluciones", value: "$ 0", trend: "0.0%", isUp: true, icon: AlertTriangle, bg: "bg-yellow-50", color: "text-yellow-500" },
-          ].map((kpi) => {
-            const Icon = kpi.icon
-            return (
-              <div key={kpi.label} className={`bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex items-center justify-between transition-opacity duration-300 ${isSyncing ? 'opacity-40 animate-pulse' : 'opacity-100'}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 ${isSyncing ? 'bg-gray-200' : kpi.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`w-5 h-5 ${isSyncing ? 'text-gray-400' : kpi.color}`} strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-0.5 font-medium">{kpi.label}</p>
-                    <p className="text-lg md:text-xl font-bold text-gray-800 tracking-tight">{isSyncing ? '---' : kpi.value}</p>
-                  </div>
-                </div>
-                {!isSyncing && (
-                  <div className={`flex flex-col items-end gap-1 ${kpi.isUp ? 'text-green-600' : 'text-red-500'}`}>
-                    <span className="text-xs font-bold">{kpi.trend}</span>
-                    <span className="text-[9px] text-gray-400 font-medium">vs ayer</span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          {/* Ventas por hora */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex flex-col">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Ventas por hora (Hoy)</h3>
-            <div className="flex-1 min-h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={hourlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#4CAF50" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="h" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
-                    tickFormatter={(v) => v >= 1000000 ? `${v / 1000000}M` : `${v / 1000}k`}
-                  />
-<Tooltip formatter={(value: any) => [formatCOP(Number(value)), "Ventas"]} />
-                  <Area type="monotone" dataKey="v" stroke="#4CAF50" strokeWidth={2} fill="url(#greenGrad)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Ventas por método de pago */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex flex-col">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Ventas por método de pago (Hoy)</h3>
-            <div className="space-y-3">
-              {paymentMethods.map((pm) => (
-                <div key={pm.method} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: pm.color + "20" }}>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pm.color }} />
-                    </div>
-                    <span className="text-sm text-gray-700">{pm.method}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">{formatCOP(pm.amount)}</span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                <span className="text-sm font-bold text-gray-700">Total</span>
-                <span className="text-sm font-bold text-gray-900">{formatCOP(2690700)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex flex-col">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Ventas por día (Semana)</h3>
-            <div className="flex-1 min-h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
-                  tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${v / 1000}k`}
-                />
-                <Tooltip formatter={(value: any) => [formatCOP(Number(value)), "Ventas"]} />
-                <Bar dataKey="v" fill="#4CAF50" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex flex-col">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Tendencia semanal de ventas</h3>
-            <div className="flex-1 min-h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
-                  tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${v / 1000}k`}
-                />
-                <Tooltip formatter={(value: any) => [formatCOP(Number(value)), "Ventas"]} />
-                <Line type="monotone" dataKey="v" stroke="#4CAF50" strokeWidth={2} dot={{ fill: "#4CAF50", r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-            </div>
-          </div>
+  // --- Components ---
+  
+  const MetricCard = ({ icon: Icon, title, value, color, type }: any) => (
+    <div className="bg-white rounded border border-gray-100 shadow-sm flex items-center p-6 flex-1 min-w-[220px]">
+      <div className="mr-6">
+        <div className={`p-0 rounded-lg`}>
+          <Icon className={color} size={48} strokeWidth={1} />
         </div>
       </div>
-
-      {/* Right Sidebar Panels */}
-      <div className="w-full xl:w-80 flex-shrink-0 space-y-4">
-        
-        {/* Alertas de Inventario Crítico */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-red-50/50">
-            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-              <Package className="w-4 h-4 text-red-500" />
-              Stock Crítico (Bajo 5 unds)
-            </h3>
-          </div>
-          <div className="p-0 max-h-[300px] overflow-y-auto no-scrollbar">
-            {lowStockAlerts.map((alert, i) => (
-              <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                <span className="text-xs font-semibold text-gray-700">{alert.item}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${alert.remaining === 0 ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                  {alert.remaining} und
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Top Vendedores */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-blue-50/40">
-            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-blue-500" />
-              Top Vendedores (Hoy)
-            </h3>
-          </div>
-          <div className="p-0 max-h-[350px] overflow-y-auto no-scrollbar">
-            {topSellers.map((seller, i) => (
-              <div key={i} className="flex flex-col p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                 <div className="flex justify-between items-center mb-1">
-                   <div className="flex gap-2 items-center">
-                     <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                       {i + 1}
-                     </span>
-                     <span className="text-xs font-bold text-gray-700">{seller.name}</span>
-                   </div>
-                   <span className="text-xs font-bold text-[#4CAF50]">{seller.total}</span>
-                 </div>
-                 <div className="pl-7">
-                   <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{seller.sales} prendas vendidas</span>
-                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      <div>
+        <p className="text-[14px] text-gray-400 font-medium mb-1">{title}</p>
+        <p className="text-2xl font-medium text-gray-700 tracking-tight">
+          {loading ? "..." : (type === "count" ? `# ${value}` : fmtCOP(value))}
+        </p>
       </div>
     </div>
   )
+
+  return (
+    <div className="bg-[#f0f3f4] min-h-full font-sans">
+      
+      {/* Selector de Almacén - Vendty Style Header */}
+      <div className="flex items-center gap-4 mb-8">
+        <span className="text-[14px] text-gray-600">Almacén</span>
+        <div className="relative">
+          <div className="flex items-center bg-white border border-gray-200 rounded shadow-sm px-3 py-1.5 min-w-[200px] justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+            <span className="text-[13px] text-gray-700">{sedeNombre || "General"}</span>
+            <div className="flex items-center gap-2">
+              <X size={14} className="text-gray-300 hover:text-gray-500" />
+              <div className="w-[1px] h-4 bg-gray-200"></div>
+              <ChevronDown size={14} className="text-gray-400" />
+            </div>
+          </div>
+        </div>
+        <button onClick={fetchAll} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#62cb31]" aria-label="Actualizar datos">
+          <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+        </button>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main Content Area */}
+        <div className="flex-1 space-y-6">
+          
+          {/* Row 1: Metrics */}
+          <div className="flex flex-wrap gap-4">
+            <MetricCard icon={ShoppingCart} title="Ventas de hoy" value={metrics.ventasHoy} color="text-[#6fc1a1]" type="currency" />
+            <MetricCard icon={FileText} title="Facturas de hoy" value={metrics.facturasHoy} color="text-[#5dade2]" type="count" />
+            <MetricCard icon={Banknote} title="Gastos de hoy" value={metrics.gastosHoy} color="text-[#e74c3c]" type="currency" />
+            <MetricCard icon={Coins} title="Utilidad de hoy" value={metrics.utilidadHoy} color="text-[#f1c40f]" type="currency" />
+          </div>
+
+          {/* Row 2: Charts */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Chart 1: Sales Hourly */}
+            <div className="bg-white rounded border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[400px]">
+              <div className="p-4 flex justify-between items-center">
+                <h3 className="text-[13px] text-gray-400 font-medium uppercase tracking-tight">Ventas por hora (Hoy)</h3>
+                <button className="text-gray-400 p-1 hover:bg-gray-50 rounded">
+                  <Menu size={18} />
+                </button>
+              </div>
+              <div className="flex-1 p-4 pb-8">
+                {hourlyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={hourlyData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#999' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#666' }} />
+                      <Tooltip formatter={(v:any) => [fmtCOP(v), 'Venta']} />
+                      <Area type="monotone" dataKey="value" stroke="#62cb31" strokeWidth={2} fillOpacity={0.1} fill="#62cb31" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : <EmptyState label="Sin ventas registradas hoy" />}
+              </div>
+            </div>
+
+            {/* Chart 2: Method Distribution */}
+            <div className="bg-white rounded border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[400px]">
+              <div className="p-4 flex justify-between items-center">
+                <h3 className="text-[13px] text-gray-400 font-medium uppercase tracking-tight">Ventas por método de pago (Hoy)</h3>
+              </div>
+              <div className="flex-1 p-4 pb-8">
+                {metodosData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={metodosData.map(m => ({ name: m.metodo, value: m.total }))}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#666' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#666' }} />
+                      <Tooltip formatter={(v:any) => [fmtCOP(v), 'Total']} />
+                      <Bar dataKey="value" fill="#3498db" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <EmptyState label="No hay datos para mostrar" />}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Bottom Charts */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+             <div className="bg-white rounded border border-gray-100 shadow-sm p-4 flex flex-col h-[320px]">
+                <h3 className="text-[13px] text-gray-400 font-medium mb-4">Ventas por día (Últimos 7 días)</h3>
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                      <XAxis dataKey="dayName" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#999' }} />
+                      <Tooltip formatter={(v:any) => [fmtCOP(v), 'Ventas']} />
+                      <Bar dataKey="value" fill="#62cb31" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+             </div>
+
+             <div className="bg-white rounded border border-gray-100 shadow-sm p-6 flex flex-col h-[320px] items-center justify-center">
+                <h3 className="text-[13px] text-gray-400 font-medium mb-6 uppercase">Tendencia semanal de ventas</h3>
+                <div className="flex flex-col items-center gap-2">
+                   <div className="w-16 h-12 bg-[#ebf5fb] rounded flex items-center justify-center mb-2 overflow-hidden border border-gray-100">
+                      <CreditCard className="text-[#3498db]" size={32} strokeWidth={1.5} />
+                   </div>
+                   <p className="text-[14px] text-gray-400">No hay datos para mostrar</p>
+                </div>
+             </div>
+          </div>
+
+        </div>
+
+        {/* Right Sidebar: Primeros Pasos */}
+        <div className="w-full lg:w-[350px]">
+          <div className="bg-white rounded border border-gray-100 shadow-sm overflow-hidden h-full">
+            <div className="p-4 flex justify-between items-center border-b border-gray-50">
+              <h3 className="text-[14px] text-gray-500 font-medium uppercase tracking-tight">Primeros pasos</h3>
+              <button className="w-6 h-6 rounded border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50">
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            <div className="p-4 grid grid-cols-2 gap-2">
+              {[
+                { id: "inicializacion", label: "GENERAL", icon: <Settings size={14} />, color: "bg-[#4c505d]" },
+                { id: "restaurante", label: "RESTAU.", icon: <Utensils size={14} />, color: "bg-[#8e44ad]" },
+                { id: "retail", label: "RETAIL", icon: <ShoppingBag size={14} />, color: "bg-[#2980b9]" },
+                { id: "ventas", label: "VENTAS", icon: <CircleDollarSign size={14} />, color: "bg-[#d35400]" }
+              ].map(tab => (
+                <button 
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded text-[11px] font-bold transition-all ${
+                    activeTab === tab.id ? `${tab.color} text-white` : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                  }`}
+                >
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4 space-y-4">
+              {STEPS[activeTab].map((step, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-3 border border-gray-100 rounded hover:bg-gray-50 transition-colors cursor-pointer group">
+                  <div className="w-6 h-6 rounded-full bg-[#62cb31] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </div>
+                  <p className="text-[11px] text-gray-600 font-medium flex-1">{step}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating WhatsApp */}
+      <a href="https://wa.me/573053107953" target="_blank" className="fixed bottom-6 right-6 w-14 h-14 bg-[#25d366] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+        <MessageCircle size={32} fill="currentColor" />
+      </a>
+    </div>
+  )
 }
+
+const EmptyState = ({ label }: { label: string }) => (
+  <div className="flex flex-col items-center justify-center h-full text-center">
+    <div className="w-16 h-12 bg-[#ebf5fb] rounded flex items-center justify-center mb-4 overflow-hidden border border-gray-100">
+       <CreditCard className="text-[#3498db]" size={32} strokeWidth={1.5} />
+    </div>
+    <p className="text-[14px] text-gray-400">{label}</p>
+  </div>
+)
+
+const STEPS: Record<string, string[]> = {
+  inicializacion: [
+    "¿Cómo realizo la Configuración Inicial?",
+    "Configuración de mis medios de pago",
+    "¿Cómo creo un usuario?",
+    "Configura la información general de tu almacén o restaurante",
+    "¿Cómo creo los Impuestos?",
+    "Configura la impresión de tu factura",
+    "Problemas con la impresión de la factura"
+  ],
+  restaurante: ["Mesas y zonas", "Menú digital", "Modificadores", "Comandas"],
+  retail: ["Importación masiva", "Códigos de barras", "Tallas y colores", "Inventario"],
+  ventas: ["Realizar venta", "Cierres diarios", "Devoluciones", "Crédito y abonos"]
+}
+
+export default Dashboard

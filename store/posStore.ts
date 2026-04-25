@@ -64,6 +64,14 @@ export interface Product {
   active: boolean
 }
 
+/** Información del usuario autenticado */
+export interface UserInfo {
+  nombre: string
+  email: string
+  rol: UserRole
+  sedeId?: string
+}
+
 // ==========================================
 // STORE PRINCIPAL DEL POS (Zustand)
 // ==========================================
@@ -71,9 +79,9 @@ export interface Product {
 interface PosState {
   // === Auth & RBAC ===
   currentRole: UserRole
-  currentUser: string
+  currentUser: UserInfo | null
   setRole: (role: UserRole) => void
-  setUser: (name: string) => void
+  setUser: (user: UserInfo) => void
   logout: () => void
 
   // === Estado de la Caja Activa ===
@@ -114,10 +122,10 @@ export const usePosStore = create<PosState>()(
     (set, get) => ({
       // Auth
       currentRole: 'admin' as UserRole,
-      currentUser: '',
+      currentUser: null,
       setRole: (role) => set({ currentRole: role }),
-      setUser: (name) => set({ currentUser: name }),
-      logout: () => set({ currentUser: '', currentRole: 'admin' as UserRole }),
+      setUser: (user) => set({ currentUser: user, currentRole: user.rol }),
+      logout: () => set({ currentUser: null, currentRole: 'cajero' as UserRole }),
 
       // Caja
       isCajaAbierta: false,

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": "Milan POS",
+  "version": "1.0.0",
+  
+  "codeStyle": {
+    "language": "TypeScript",
+    "strictMode": true,
+    "indentation": "2 spaces",
+    "quotes": "single",
+    "semicolons": false,
+    "trailingComma": "es5",
+    "maxLineLength": 120,
+    "componentExtension": ".tsx",
+    "logicExtension": ".ts"
+  },
+
+  "naming": {
+    "components": "PascalCase",
+    "hooks": "useCamelCase",
+    "services": "camelCase.service.ts",
+    "types": "PascalCase (interfaces), camelCase (type aliases)",
+    "constants": "SCREAMING_SNAKE_CASE",
+    "cssClasses": "kebab-case (Tailwind utility classes)",
+    "files": {
+      "components": "PascalCase.tsx",
+      "hooks": "useCamelCase.ts",
+      "services": "nombre.service.ts",
+      "types": "database.types.ts",
+      "stores": "camelCaseStore.ts"
+    }
+  },
+
+  "architecture": {
+    "stateManagement": "Zustand (with persist middleware)",
+    "dataLayer": "Service pattern (lib/services/*.service.ts)",
+    "database": "Supabase (PostgreSQL + RLS)",
+    "auth": "Supabase Auth → perfil → rol",
+    "rbac": "lib/rbac.tsx (hasModuleAccess + RoleGate)",
+    "routing": "Next.js App Router (single page.tsx with module switching)"
+  },
+
+  "roles": {
+    "admin": "Full access to all modules + configuration",
+    "gerente": "Operational modules (vender, ventas, inventario, informes, etc.)",
+    "cajero": "Restricted to vender, ventas, contactos",
+    "bodeguero": "Restricted to inventario"
+  },
+
+  "patterns": {
+    "supabaseClient": "Singleton via getClient() in each service",
+    "errorHandling": "throw Error in services, try/catch in components",
+    "sedeScope": "All queries filtered by sede_id from useSede() context",
+    "offlineSync": "useNetworkMonitor → offlineQueue → flushQueue on reconnect",
+    "kardexTrigger": "DO NOT manually insert Kardex — UPDATE venta.estado to COMPLETADA triggers DB function",
+    "componentDecomposition": "Max ~200 lines per component. Extract hooks for logic, types for interfaces"
+  },
+
+  "testing": {
+    "framework": "Vitest + @testing-library/react",
+    "directory": "tests/",
+    "setupFile": "tests/setup.ts",
+    "runCommand": "npm test",
+    "mockStrategy": "Supabase client mocked globally in setup.ts",
+    "coverage": "npm run test:coverage"
+  },
+
+  "supabase": {
+    "tablesWithRLS": [
+      "productos", "variantes", "stock_fisico", "ventas", "ventas_detalle",
+      "kardex", "sesiones_caja", "categorias", "perfiles", "sedes"
+    ],
+    "migrationDir": "supabase/",
+    "triggerKardex": "trg_procesar_venta → fn_procesar_venta → INSERT kardex",
+    "rlsPrinciple": "sede_id scoping + role-based access"
+  },
+
+  "formatting": {
+    "currency": "formatCOP(number) → '$ X.XXX'",
+    "dates": "toLocaleDateString('es-CO')",
+    "timezone": "America/Bogota"
+  },
+
+  "forbidden": [
+    "Do NOT use Bootstrap or jQuery",
+    "Do NOT import Google Fonts via CDN link tags (use next/font)",
+    "Do NOT set ignoreBuildErrors: true in next.config",
+    "Do NOT manually insert Kardex records",
+    "Do NOT use sedeId = '1' or any non-UUID value",
+    "Do NOT create components larger than 300 lines without decomposing"
+  ]
+}

@@ -73,3 +73,6 @@ Thumbs.db
 node_modules
 tsconfig.tsbuildinfo
 
+# Legacy reference (contains exposed API keys and credentials)
+Untitled-1.md
+

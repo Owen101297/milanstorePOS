@@ -1,0 +1,71 @@
+/* Bootstrap 3 CDN para replica exacta */
+@import url('https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+
+body {
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Vendty Legacy Colors */
+:root {
+  --vendty-green: #62cb31;
+  --vendty-dark: #333;
+  --vendty-darker: #2d2d2d;
+  --vendty-sidebar: #505050;
+  --vendty-navbar-dark: #505050;
+}
+
+.line-border {
+  background-color: var(--vendty-green) !important;
+  height: 3px;
+}
+
+/* Dark sidebar exact */
+.site-menubar {
+  background-color: var(--vendty-dark) !important;
+}
+
+.site-menubar-body {
+  background-color: var(--vendty-sidebar) !important;
+}
+
+.site-menu-sub {
+  background-color: var(--vendty-sidebar) !important;
+}
+
+/* Navbar widgets */
+.widgetsMenu .swidget {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s;
+}
+
+.widgetsMenu .swidget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+/* Mobile menu */
+@media (max-width: 768px) {
+  #menucel {
+    background: var(--vendty-dark);
+  }
+  
+  .navbar-vendty {
+    background: var(--vendty-dark);
+  }
+}
+
+/* Toast warnings Vendty style */
+.toast-warning1 {
+  border-left: 6px solid #62cb31 !important;
+  background: white;
+  color: #5D5A5A;
+}
+
+/* Vendty icons sizing */
+.iconimg {
+  width: 24px !important;
+  height: 24px !important;
+}

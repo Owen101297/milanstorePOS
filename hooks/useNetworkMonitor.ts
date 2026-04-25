@@ -2,12 +2,21 @@
 
 import { useEffect, useCallback } from 'react'
 import { usePosStore } from '@/store/posStore'
+import { ventas } from '@/lib/services'
+import type { MetodoPago } from '@/lib/database.types'
 
 /**
- * useNetworkMonitor - Detecta cambios de conectividad en tiempo real
+ * useNetworkMonitor — Tarea #17: Offline Sync Engine
  * 
- * Cuando la red se restaura, dispara automáticamente el flush de la cola
- * offline (todas las ventas pendientes se envían a Supabase en ráfaga).
+ * Detecta cambios de conectividad y sincroniza la cola de ventas
+ * offline con Supabase cuando la red se restaura.
+ * 
+ * Flujo:
+ * 1. Venta se encola en offlineQueue (status='pending')
+ * 2. Cuando vuelve la red → flushQueue()
+ * 3. Cada venta se envía a ventas.procesarVenta() 
+ * 4. Si falla → queda pending para siguiente ciclo
+ * 5. Si OK → markSynced(saleId) + clearQueue()
  */
 export function useNetworkMonitor() {
   const setOnline = usePosStore(s => s.setOnline)
@@ -23,20 +32,41 @@ export function useNetworkMonitor() {
 
     for (const sale of pending) {
       try {
-        // ===================================================
-        // AQUÍ SE CONECTARÁ SUPABASE EN PRODUCCIÓN
-        // Ejemplo:
-        // await supabase.from('ventas').insert(sale)
-        // ===================================================
-        
-        // Simulamos un delay de red por cada venta
-        await new Promise(resolve => setTimeout(resolve, 200))
-        
+        // Mapear la SaleRecord del store al input de ventas.procesarVenta()
+        const metodoPagoMap: Record<string, MetodoPago> = {
+          efectivo: 'EFECTIVO',
+          tarjeta: 'TARJETA',
+          tarjeta_credito: 'TARJETA',
+          tarjeta_debito: 'TARJETA',
+          transferencia: 'TRANSFERENCIA',
+          mixto: 'MIXTO',
+        }
+
+        const metodo = sale.payments.length > 1 
+          ? 'MIXTO' as MetodoPago
+          : metodoPagoMap[sale.payments[0]?.method?.toLowerCase() ?? 'efectivo'] ?? 'EFECTIVO'
+
+        await ventas.procesarVenta({
+          sedeId: sale.sedeId,
+          cajaId: sale.sedeId, // Fallback: usar sede como caja si no hay ID de caja
+          usuarioId: sale.sedeId, // Fallback: se completa con auth real cuando haya sesión
+          clienteNombre: sale.client.name,
+          clienteId: sale.client.id?.toString(),
+          items: sale.cart.map(item => ({
+            varianteId: item.id.toString(),
+            cantidad: item.qty,
+            precioUnitario: item.price,
+            descuento: item.discount ?? 0,
+            impuesto: 0, // Se calcula en el service
+          })),
+          metodoPago: metodo,
+        })
+
         markSynced(sale.id)
         console.log(`[Milan POS] ✅ Venta ${sale.id} sincronizada`)
       } catch (error) {
         console.error(`[Milan POS] ❌ Error sincronizando venta ${sale.id}:`, error)
-        // No marcamos como synced, se reintentará en el próximo ciclo
+        // No marcamos como synced → se reintentará en el próximo ciclo
       }
     }
 
@@ -64,11 +94,19 @@ export function useNetworkMonitor() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
+    // Retry periódico: intenta flush cada 30s si hay pendientes
+    const retryInterval = setInterval(() => {
+      if (navigator.onLine && offlineQueue.some(s => s.status === 'pending')) {
+        flushQueue()
+      }
+    }, 30_000)
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      clearInterval(retryInterval)
     }
-  }, [setOnline, flushQueue])
+  }, [setOnline, flushQueue, offlineQueue])
 
   return { flushQueue }
 }

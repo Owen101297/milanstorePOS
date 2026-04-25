@@ -4,34 +4,32 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type UserRole } from '@/lib/rbac'
 import { usePosStore } from '@/store/posStore'
-
-interface Profile {
-  rol: UserRole
-  nombre_completo: string
-  sede_id: string
-}
+import type { UserInfo } from '@/store/posStore'
 
 export function useAuth() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
-  const setRole = usePosStore(s => s.setRole)
   const setUser = usePosStore(s => s.setUser)
+  const storeLogout = usePosStore(s => s.logout)
 
   useEffect(() => {
     // Fetch session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setUser(session.user.email || 'User')
-        // Fetch profile
+        // Fetch profile for role and name
         supabase
           .from('perfiles')
           .select('rol, nombre_completo, sede_id')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => {
-            if (data) {
-              setRole(data.rol)
+            const userInfo: UserInfo = {
+              nombre: data?.nombre_completo || session.user.email || 'User',
+              email: session.user.email || '',
+              rol: (data?.rol as UserRole) || 'cajero',
+              sedeId: data?.sede_id || undefined,
             }
+            setUser(userInfo)
           })
       }
       setLoading(false)
@@ -40,19 +38,33 @@ export function useAuth() {
     // Listen changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setUser(session.user.email || 'User')
-        supabase.from('perfiles').select('rol').eq('id', session.user.id).single().then(({ data }) => {
-          setRole((data as Profile)?.rol || 'cajero')
-        })
+        supabase
+          .from('perfiles')
+          .select('rol, nombre_completo, sede_id')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            const userInfo: UserInfo = {
+              nombre: data?.nombre_completo || session.user.email || 'User',
+              email: session.user.email || '',
+              rol: (data?.rol as UserRole) || 'cajero',
+              sedeId: data?.sede_id || undefined,
+            }
+            setUser(userInfo)
+          })
       } else {
-        setRole('cajero')
-        setUser('')
+        // Solo hacer logout si NO es un usuario demo
+        const currentUser = usePosStore.getState().currentUser;
+        if (!currentUser?.email?.startsWith('demo.')) {
+          storeLogout()
+        }
       }
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase, setRole, setUser])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -73,8 +85,8 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut()
+    storeLogout()
   }
 
   return { loading, signIn, signUp, signOut }
 }
-

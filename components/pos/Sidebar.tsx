@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import {
-  ShoppingCart, Users, DollarSign, Package, Heart,
-  ShoppingBag, FileText, BarChart2, Store, X, Home, Settings
+import React from "react"
+import { 
+  ShoppingCart, User, TrendingUp, Package, Heart, 
+  ShoppingBag, Users, BarChart2, Monitor, Tag, ChevronRight
 } from "lucide-react"
+import { usePosStore } from "@/store/posStore"
+import { hasModuleAccess } from "@/lib/rbac"
 
 interface SidebarProps {
   activeModule: string
@@ -13,156 +15,122 @@ interface SidebarProps {
   setActiveSubMenu: (sub: string) => void
 }
 
-const navItems = [
-  { id: "vender", label: "Vender", icon: ShoppingCart, subMenu: [] },
-  {
-    id: "nomina", label: "Nómina Electr.", icon: Users, subMenu: [
-      "Empleados", "Liquidaciones", "Nómina Electrónica", "Configuración Nómina"
-    ]
-  },
-  {
-    id: "ventas", label: "Ventas", icon: DollarSign, subMenu: [
-      "Remisiones", "Histórico de Ventas", "Histórico de Remisiones",
-      "Ingresar Efectivo", "Cerrar Caja (Cajero)", "Cierres de Caja",
-      "Plan Separe", "Ventas Online", "Cotizaciones", "Créditos"
-    ]
-  },
-  {
-    id: "inventario", label: "Inventario", icon: Package, subMenu: [
-      "Productos", "Categorías", "Movimientos", "Libro de Precios",
-      "Producción", "Auditoría Inventario"
-    ]
-  },
-  {
-    id: "fidelizacion", label: "Fidelización", icon: Heart, subMenu: [
-      "Gift Cards", "Puntos", "Promociones"
-    ]
-  },
-  {
-    id: "compras", label: "Compras", icon: ShoppingBag, subMenu: [
-      "Documento Soporte", "Historico de Doc. Soporte", "Gastos",
-      "Órdenes de Compras", "Bancos", "Movimientos bancarios", "Conciliaciones"
-    ]
-  },
-  {
-    id: "contactos", label: "Contactos", icon: FileText, subMenu: [
-      "Clientes", "Vendedores", "Proveedores", "Domiciliarios"
-    ]
-  },
-  {
-    id: "informes", label: "Informes", icon: BarChart2, subMenu: [
-      "Mis Reportes"
-    ]
-  },
-  {
-    id: "tienda", label: "Tienda", icon: Store, subMenu: [
-      "Configurar Tienda", "Pedidos Online", "Categorías Tienda"
-    ]
-  },
-]
+const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, activeSubMenu, setActiveSubMenu }) => {
+  const currentRole = usePosStore(s => s.currentRole)
 
-export default function Sidebar({ activeModule, setActiveModule, activeSubMenu, setActiveSubMenu }: SidebarProps) {
-  const [openFlyout, setOpenFlyout] = useState<string | null>(null)
+  const menuItems = [
+    { id: "vender", label: "Vender", icon: ShoppingCart, rbacId: "vender" },
+    { id: "nomina", label: "Nómina Electr.", icon: User, rbacId: "nomina" },
+    { 
+      id: "ventas", label: "Ventas", icon: TrendingUp, rbacId: "ventas",
+      subItems: [
+        { id: "historial", label: "Histórico de Ventas" },
+        { id: "ingresar_efectivo", label: "Ingresar Efectivo" },
+        { id: "cerrar_caja", label: "Cierre de Caja" },
+        { id: "plan_separe", label: "Plan Separe" },
+        { id: "cotizaciones", label: "Cotizaciones" },
+        { id: "creditos", label: "Créditos" },
+      ]
+    },
+    { 
+      id: "inventario", label: "Inventario", icon: Package, rbacId: "inventario",
+      subItems: [
+        { id: "productos", label: "Productos" },
+        { id: "categorias", label: "Categorías" },
+        { id: "movimientos", label: "Movimientos" },
+        { id: "precios", label: "Libro de Precios" },
+        { id: "produccion", label: "Producción" },
+        { id: "auditoria", label: "Auditoría Inventario" },
+      ]
+    },
+    { id: "fidelizacion", label: "Fidelización", icon: Heart, rbacId: "fidelizacion" },
+    { id: "compras", label: "Compras", icon: ShoppingBag, rbacId: "compras" },
+    { id: "contactos", label: "Contactos", icon: Users, rbacId: "contactos" },
+    { id: "informes", label: "Informes", icon: BarChart2, rbacId: "informes" },
+    { id: "tienda", label: "Tienda", icon: Monitor, rbacId: "tienda" },
+  ]
 
-  const handleNavClick = (item: typeof navItems[0]) => {
-    if (item.subMenu.length === 0) {
-      setActiveModule(item.id)
-      setActiveSubMenu("")
-      setOpenFlyout(null)
+  const filteredItems = menuItems.filter(item => hasModuleAccess(item.rbacId, currentRole))
+
+  const handleModuleClick = (item: any) => {
+    setActiveModule(item.id)
+    if (item.subItems && item.subItems.length > 0) {
+      setActiveSubMenu(item.subItems[0].id)
     } else {
-      setOpenFlyout(openFlyout === item.id ? null : item.id)
-      setActiveModule(item.id)
+      setActiveSubMenu("")
     }
   }
 
-  const handleSubMenuClick = (sub: string) => {
-    setActiveSubMenu(sub)
-    setOpenFlyout(null)
-  }
+  const activeItem = filteredItems.find(item => item.id === activeModule)
+  const hasSubMenu = activeItem && activeItem.subItems && activeItem.subItems.length > 0
 
   return (
-    <>
-      {/* Sidebar */}
-      <aside
-        className="fixed left-0 top-0 bottom-0 w-[90px] flex flex-col items-center py-3 gap-0.5 z-40"
-        style={{ backgroundColor: "#2d2d2d" }}
-      >
-        {/* Logo */}
-        <button
-          onClick={() => { setActiveModule("dashboard"); setActiveSubMenu(""); setOpenFlyout(null) }}
-          className="flex flex-col items-center mb-2 px-2 w-full py-2 hover:bg-[#3a3a3a] rounded transition-colors"
+    <div className="h-full flex z-[100] select-none">
+      
+      {/* Primary Sidebar Bar (Left) */}
+      <div className="w-[100px] h-full bg-[#2b2b2b] flex flex-col border-r border-black/20 shrink-0">
+        
+        {/* Logo Area */}
+        <div 
+          className="h-[100px] bg-[#333] flex flex-col items-center justify-center cursor-pointer border-b border-white/5 relative"
+          onClick={() => { setActiveModule("dashboard"); setActiveSubMenu(""); }}
         >
-          <div className="w-16 h-16 flex items-center justify-center overflow-hidden rounded-md">
-            <img 
-              src="/milan-logo.png" 
-              alt="Milan POS" 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                // Fallback in case image is not found yet
-                e.currentTarget.src = "https://via.placeholder.com/64x64/000000/FFFFFF?text=MILAN";
-              }}
-            />
-          </div>
-        </button>
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#62cb31]" />
+          <Tag className="text-white mb-1" size={28} />
+          <span className="text-[16px] font-bold text-white tracking-tighter">Vendty</span>
+        </div>
 
-        {/* Nav Items */}
-        <nav className="flex flex-col items-center gap-0 w-full flex-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = activeModule === item.id
-            return (
-              <div key={item.id} className="relative w-full">
-                <button
-                  onClick={() => handleNavClick(item)}
-                  className={`w-full flex flex-col items-center justify-center py-3 px-1 gap-1 transition-colors cursor-pointer
-                    ${isActive ? "bg-[#3a3a3a]" : "hover:bg-[#3a3a3a]"}`}
-                >
-                  <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
-                  <span className="text-white text-[9px] font-medium text-center leading-tight px-1">{item.label}</span>
-                </button>
-              </div>
-            )
-          })}
-        </nav>
-      </aside>
-
-      {/* Flyout submenu */}
-      {openFlyout && (
-        <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpenFlyout(null)}
-          />
-          <div
-            className="fixed left-[90px] top-0 bottom-0 w-56 z-40 flex flex-col shadow-2xl overflow-hidden"
-            style={{ backgroundColor: "#3a3a3a" }}
-          >
-            <div className="flex items-center justify-between px-4 py-4 border-b border-[#4a4a4a]">
-              <span className="text-white font-semibold text-sm">
-                {navItems.find(n => n.id === openFlyout)?.label}
+        {/* Modules List */}
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          {filteredItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleModuleClick(item)}
+              className={`w-full py-4 flex flex-col items-center justify-center border-b border-white/5 transition-colors relative min-h-[90px] outline-none ${
+                activeModule === item.id 
+                  ? "bg-[#1a1a1a] text-white" 
+                  : "text-gray-400 hover:bg-black/10 hover:text-white"
+              } focus-visible:ring-2 focus-visible:ring-[#62cb31] focus-visible:ring-inset`}
+              aria-current={activeModule === item.id ? 'page' : undefined}
+            >
+              <item.icon size={26} strokeWidth={1.5} className="mb-2" />
+              <span className="text-[10px] font-bold uppercase tracking-tight text-center px-1 leading-tight">
+                {item.label}
               </span>
-              <button onClick={() => setOpenFlyout(null)} className="text-gray-400 hover:text-white transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {navItems.find(n => n.id === openFlyout)?.subMenu.map((sub) => (
-                <button
-                  key={sub}
-                  onClick={() => handleSubMenuClick(sub)}
-                  className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-[#444]
-                    ${activeSubMenu === sub
-                      ? "text-[#4CAF50] bg-[#2d2d2d] font-medium"
-                      : "text-gray-200 hover:text-white hover:bg-[#4a4a4a]"
-                    }`}
-                >
-                  {sub}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
+              {activeModule === item.id && (
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#62cb31]" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* SubMenu Panel (Persistent when active) */}
+      {hasSubMenu && (
+        <div className="w-[200px] h-full bg-[#404040] flex flex-col border-r border-black/20 animate-in slide-in-from-left-4 duration-300">
+           <div className="h-[100px] border-b border-white/5" /> {/* Spacer to align with logo */}
+           
+           <ul className="py-4 space-y-1">
+             {activeItem.subItems?.map((sub) => (
+               <li key={sub.id}>
+<button
+                    onClick={() => setActiveSubMenu(sub.id)}
+                    className={`w-full text-left px-6 py-4 text-[13px] transition-all flex justify-between items-center outline-none ${
+                      activeSubMenu === sub.id 
+                        ? "text-white bg-black/10 font-black" 
+                        : "text-gray-400 hover:text-white hover:bg-black/5 font-medium"
+                    } focus-visible:ring-2 focus-visible:ring-[#62cb31] focus-visible:ring-inset`}
+                  >
+                    {sub.label}
+                    {activeSubMenu === sub.id && <ChevronRight size={14} className="text-[#62cb31]" />}
+                  </button>
+               </li>
+             ))}
+           </ul>
+        </div>
       )}
-    </>
+    </div>
   )
 }
+
+export default Sidebar

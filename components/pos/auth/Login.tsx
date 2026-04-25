@@ -1,157 +1,141 @@
-"use client"
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
-import { usePosStore } from '@/store/posStore'
-import { Shield, LogIn, Mail, Lock, User } from 'lucide-react'
-import type { UserRole } from '@/lib/rbac'
+import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { usePosStore } from '@/store/posStore';
+import type { UserRole } from '@/lib/rbac';
+import type { UserInfo } from '@/store/posStore';
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const { signIn } = useAuth()
-  const router = useRouter()
-  const setUser = usePosStore(s => s.setUser)
-  const setRole = usePosStore(s => s.setRole)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { signIn } = useAuth();
+  const setUser = usePosStore(s => s.setUser);
 
   const handleDemoLogin = (rol: UserRole) => {
-    setUser(rol === 'admin' ? 'Demo Administrador' : rol === 'gerente' ? 'Demo Gerente' : rol === 'cajero' ? 'Demo Cajero' : 'Demo Bodeguero')
-    setRole(rol)
-    router.push('/')
-  }
+    const demoNames: Record<UserRole, string> = {
+      admin: 'Demo Administrador',
+      gerente: 'Demo Gerente',
+      cajero: 'Demo Cajero',
+      bodeguero: 'Demo Bodeguero',
+    };
+    const demoUser: UserInfo = {
+      nombre: demoNames[rol],
+      email: `demo.${rol}@milanpos.com`,
+      rol,
+    };
+    setUser(demoUser);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError('');
     try {
-      await signIn(email, password)
-      router.push('/')
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+      await signIn(email, password);
+      // useAuth hook will update the store automatically
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al iniciar sesión';
+      setError(message);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6">
-        <div className="text-center">
-          <div className="w-20 h-20 mx-auto bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Shield className="w-10 h-10 text-white" />
+    <div className="login-container">
+      {/* Left Panel: Marketing/Illustration */}
+      <div className="login-left">
+        <div className="left-content">
+          <h1>Facturación Electrónica para tu punto de Venta o Restaurante</h1>
+          <p>
+            Ya estamos listos para que comiences a facturar electrónicamente con validación previa, 
+            de acuerdo a la última reglamentación de la DIAN.
+          </p>
+          <button className="btn-outline-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">DESCÚBRELA YA</button>
+          
+          <div className="login-illustration">
+             <img 
+               src="https://vendty.com/wp-content/uploads/2021/04/computador-vendty.png" 
+               alt="Illustration" 
+               style={{ width: '100%', height: 'auto' }}
+             />
           </div>
-          <h1 className="text-2xl font-black text-gray-800 mb-2">Milan POS Login</h1>
-          <p className="text-sm text-gray-500">Accede con tus credenciales</p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="email"
+      {/* Right Panel: Login Form */}
+      <div className="login-right">
+        <div className="right-content">
+          <img 
+            src="https://pos.vendty.com/assets/img/logo.png" 
+            alt="Vendty Logo" 
+            className="login-logo"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://vendty.com/wp-content/uploads/2019/08/Vendty-Logo-Color.png';
+            }}
+          />
+          
+          <h2>Iniciar Sesión</h2>
+          <p className="login-subtitle">¿Olvidaste tu clave? · Crear una cuenta</p>
+          
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <input 
+                type="email" 
+                placeholder="Tu correo electrónico" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                placeholder="admin@milanpos.com"
                 required
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">Contraseña</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type={showPassword ? 'text' : 'password'}
+            <div className="form-group">
+              <input 
+                type="password" 
+                placeholder="Contraseña" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                placeholder="••••••••"
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showPassword ? '🙈' : '👁'}
+            </div>
+
+            {error && <p style={{ color: 'red', fontSize: '12px', marginBottom: '10px' }}>{error}</p>}
+
+            <div className="login-footer">
+              <div className="footer-links">
+                <a href="#">¿Olvidaste tu clave?</a>
+                <a href="#">Crear una cuenta</a>
+              </div>
+              <button type="submit" className="btn-login" disabled={loading}>
+                {loading ? 'Iniciando...' : 'Iniciar Sesión'}
               </button>
             </div>
+          </form>
+
+          <div className="whatsapp-help">
+            ¿Tienes problema para logearte? Contáctanos por WhatsApp a este número:<br />
+            <a href="https://wa.me/573053107953">+57 3053107953</a>
+            <br /><br />
+            ¿Necesitas ayuda? Contacta con nuestro equipo de soporte <a href="#">aquí</a>
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-xl flex items-center gap-2 font-bold">
-              <Lock className="w-4 h-4" />
-              {error}
+          {/* Modo Demo (Testing) */}
+          <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+            <p style={{ fontSize: '11px', color: '#aaa', marginBottom: '12px', textAlign: 'center', letterSpacing: '2px' }}>MODO DEMO</p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <button type="button" onClick={() => handleDemoLogin('admin')} 
+                style={{ fontSize: '13px', padding: '8px 20px', background: '#222', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                Admin
+              </button>
+              <button type="button" onClick={() => handleDemoLogin('cajero')} 
+                style={{ fontSize: '13px', padding: '8px 20px', background: '#62cb31', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                Cajero
+              </button>
             </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black py-3.5 rounded-xl shadow-lg hover:from-emerald-600 hover:to-green-700 focus:ring-4 focus:ring-emerald-200 focus:outline-none transform transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Iniciando...
-              </span>
-            ) : (
-              <>
-                <LogIn className="w-5 h-5 inline ml-1 mb-0.5" />
-                Iniciar Sesión
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="text-xs text-center text-slate-400 pt-4 border-t border-slate-200">
-          ¿Usuario nuevo? Admin creará tu cuenta en Panel Usuarios.
-        </div>
-
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-bold text-slate-500 text-center uppercase tracking-widest">Modo Demo - Sin Supabase</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin')}
-              className="bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all"
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('gerente')}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all"
-            >
-              Gerente
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('cajero')}
-              className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all"
-            >
-              Cajero
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('bodeguero')}
-              className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all"
-            >
-              Bodeguero
-            </button>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
-

@@ -10,7 +10,7 @@ interface SedeContextType {
 }
 
 const SedeContext = createContext<SedeContextType>({
-  sedeId: '1',
+  sedeId: '00000000-0000-0000-0000-000000000000',
   setSedeId: () => {},
   isSyncing: false,
   setIsSyncing: () => {}
@@ -18,7 +18,7 @@ const SedeContext = createContext<SedeContextType>({
 
 // Provider that should wrap the application
 export const SedeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [sedeId, setSedeState] = useState('1');
+  const [sedeId, setSedeState] = useState('00000000-0000-0000-0000-000000000000');
   const [isSyncing, setIsSyncing] = useState(true);
 
   // Carga inicial y simulación de sincronización backend (hydration-safe)
